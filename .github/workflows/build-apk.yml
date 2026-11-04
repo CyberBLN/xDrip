@@ -1,7 +1,8 @@
-name: Build test APK
+name: Build and unit test (release, as upstream)
 
 # Only in the fork's master branch, so it never becomes part of a pull request.
-# Builds any branch on demand and keeps the APK as an artifact.
+# Builds any branch on demand with the same Gradle tasks and check as upstream's
+# unit_test.yml (release variant, APK size check) and keeps the unsigned APKs.
 on:
   workflow_dispatch:
     inputs:
@@ -23,10 +24,14 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - name: Unit tests and debug APK
-        run: ./gradlew --no-daemon assembleProdDebug testProdDebugUnitTest
+      - name: Unit tests and release APKs
+        run: ./gradlew --no-daemon assembleProdRelease testProdReleaseUnitTest
+      - name: Check output
+        run: bash ./etc/CheckBuild/check-release.sh test
       - uses: actions/upload-artifact@v4
         with:
           name: xdrip-${{ github.run_number }}-apk
-          path: app/build/outputs/apk/prod/debug/*.apk
+          path: |
+            app/build/outputs/apk/prod/release/*.apk
+            wear/build/outputs/apk/prod/release/*.apk
           retention-days: 14
