@@ -70,7 +70,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash .github/scripts/hc-manage-permissions-test.sh xdrip-${{ matrix.variant }}.apk result
+          script: bash .github/emulator/hc-manage-permissions-test.sh xdrip-${{ matrix.variant }}.apk result
       - uses: actions/upload-artifact@v4
         if: always()
         with:
