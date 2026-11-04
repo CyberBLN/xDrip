@@ -354,9 +354,9 @@ public class HealthGamut {
         if (init()) {
             val list = new LinkedList<BloodGlucoseRecord>();
             val record = new BloodGlucoseRecord(Instant.ofEpochMilli(bg.timestamp),
-                    null, BloodGlucose.milligramsPerDeciliter(bg.calculated_value),
+                    null, Metadata.unknownRecordingMethod(), BloodGlucose.milligramsPerDeciliter(bg.calculated_value),
                     BloodGlucoseRecord.SPECIMEN_SOURCE_INTERSTITIAL_FLUID,
-                    MealType.MEAL_TYPE_UNKNOWN, BloodGlucoseRecord.RELATION_TO_MEAL_UNKNOWN, new Metadata());
+                    MealType.MEAL_TYPE_UNKNOWN, BloodGlucoseRecord.RELATION_TO_MEAL_UNKNOWN);
             list.add(record);
             client.insertRecords(list, coroutines.getContinuation((result, throwable) -> {
                 try {

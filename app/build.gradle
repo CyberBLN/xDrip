@@ -291,7 +291,7 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.13.2'
     implementation 'com.getpebble:pebblekit:4.0.1'
     //implementation ('io.rebble.pebblekit2:client-java:1.2.0')
-    implementation ("androidx.health.connect:connect-client:1.1.0-alpha06") {
+    implementation ("androidx.health.connect:connect-client:1.1.0") {
         exclude group: 'androidx.core', module: 'core'
     }
    // implementation 'com.github.jamorham:amazfitcommunication:master-SNAPSHOT'
