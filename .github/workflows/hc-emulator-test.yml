@@ -9,7 +9,7 @@ on:
       base:
         description: Unchanged reference (branch, tag or commit)
         required: true
-        default: c42cf55
+        default: c42cf55c6b972215654bc2a34ce563c87a7aa594
       fix:
         description: Branch with the fix
         required: true
@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         variant: [base, fix]
     steps:
