@@ -2,10 +2,10 @@ name: Health Connect emulator test
 
 # Only in the fork's master branch, so it never becomes part of a pull request.
 # Builds the unchanged base and the fix branch, then taps "Manage permissions"
-# on Android 13, 14, 15 and 16 emulators and keeps screenshots and logs.
-# Android 13 images have no Health Connect app (and no Play Store), so that
-# row shows the path where Health Connect cannot be opened at all.
-# From Android 14 on the fix job fails if Health Connect does not open; any job fails if the test
+# on Android 14, 15 and 16 emulators and keeps screenshots and logs.
+# Android 13 is left out: without Play Store xDrip+ crashes on start when Health
+# Connect is enabled (market:// link in HealthGamut.init), before the test starts.
+# The fix job fails if Health Connect does not open; any job fails if the test
 # itself breaks (navigation, setup). The base job only records what happens.
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [33, 34, 35, 36]
+        api: [34, 35, 36]
         variant: [base, fix]
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash .github/emulator/hc-manage-permissions-test.sh xdrip-${{ matrix.variant }}.apk result ${{ (matrix.variant == 'fix' && matrix.api >= 34) && 'expect-health-connect' || '' }}
+          script: bash .github/emulator/hc-manage-permissions-test.sh xdrip-${{ matrix.variant }}.apk result ${{ matrix.variant == 'fix' && 'expect-health-connect' || '' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
