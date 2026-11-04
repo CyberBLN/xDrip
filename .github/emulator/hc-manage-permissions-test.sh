@@ -66,27 +66,32 @@ for n in nodes:
 EOF
 }
 
-# A slow emulator often shows "<app> isn't responding"; answer it with "Wait".
+# A slow emulator often shows "<app> isn't responding". The launcher is not needed for the
+# test, so close it; for any other app answer with "Wait".
 dismiss_anr() {
-    local wait
-    if grep -q "isn&apos;t responding\|isn't responding" "$OUT/ui-last.xml" 2>/dev/null; then
-        wait=$(find_text "Wait")
-        if [ -n "$wait" ]; then
-            log "ANR dialog: $(grep -o 'text="[^"]*responding"' "$OUT/ui-last.xml" | head -1), tapping Wait"
-            adb shell input tap $wait
-            sleep 3
-            return 0
-        fi
-    fi
-    return 1
+    local title button pos
+    grep -q "isn&apos;t responding\|isn't responding" "$OUT/ui-last.xml" 2>/dev/null || return 1
+    title=$(grep -o 'text="[^"]*responding"' "$OUT/ui-last.xml" | head -1)
+    case "$title" in
+        *Launcher*) button="Close app" ;;
+        *) button="Wait" ;;
+    esac
+    pos=$(find_text "$button")
+    [ -n "$pos" ] || return 1
+    log "ANR dialog: $title, tapping $button"
+    adb shell input tap $pos
+    sleep 3
+    return 0
 }
 
 # Tap the first element whose text matches; dismiss ANR dialogs, scroll down and retry if needed.
 tap_text() {
-    local text=$1 tries=${2:-8} i pos
-    for ((i = 0; i < tries; i++)); do
-        dump_ui || { log "uiautomator dump failed"; continue; }
-        if dismiss_anr; then continue; fi
+    local text=$1 tries=${2:-8} i=0 anr=0 pos
+    while ((i < tries)); do
+        dump_ui || { log "uiautomator dump failed"; ((i++)); continue; }
+        # Dismissing an ANR dialog does not count as a try (but at most 10 of them).
+        if ((anr < 10)) && dismiss_anr; then ((anr++)); continue; fi
+        ((i++))
         pos=$(find_text "$text")
         if [ -n "$pos" ]; then
             log "tap '$text' at $pos"
@@ -125,9 +130,11 @@ API=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 log "Android $(adb shell getprop ro.build.version.release | tr -d '\r') / API $API"
 log "Health Connect: $(adb shell pm list packages | grep -iE 'healthconnect|healthdata' | tr -d '\r' | tr '\n' ' ')"
 
-# Let the launcher settle; on a cold emulator it often reports an ANR right after boot.
+# Let the system settle, then stop the launcher: on a cold emulator (seen on API 34) it keeps
+# reporting ANRs, and the test only needs xDrip+ and Health Connect in front.
 sleep 15
 dump_ui && dismiss_anr
+adb shell am force-stop com.google.android.apps.nexuslauncher
 
 adb install -r -g "$APK" | tee -a "$OUT/steps.txt" | grep -q Success || abort "APK installation failed"
 adb logcat -c
