@@ -10,6 +10,8 @@ OUT=$2
 PKG=com.eveningoutpost.dexdrip
 PREFS=/data/data/$PKG/shared_prefs/${PKG}_preferences.xml
 mkdir -p "$OUT"
+# adb shell must never wait for input from the runner
+exec </dev/null
 
 log() { echo "[$(date +%T)] $*" | tee -a "$OUT/steps.txt"; }
 
@@ -17,7 +19,7 @@ log() { echo "[$(date +%T)] $*" | tee -a "$OUT/steps.txt"; }
 tap_text() {
     local text=$1 tries=${2:-8} i bounds
     for ((i = 0; i < tries; i++)); do
-        adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+        timeout 60 adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
         adb shell cat /sdcard/ui.xml > "$OUT/ui-last.xml"
         bounds=$(python3 - "$OUT/ui-last.xml" "$text" <<'EOF'
 import sys, re, xml.etree.ElementTree as ET
@@ -52,13 +54,13 @@ adb logcat -c
 
 # Open the preferences once so that the preferences file exists, then enable Health Connect
 # directly in the file (switching it on in the UI would start the permission request flow).
-adb shell am start -W -n $PKG/.utils.Preferences >/dev/null; sleep 5
+timeout 60 adb shell am start -W -n $PKG/.utils.Preferences >/dev/null; sleep 5
 adb shell am force-stop $PKG
 adb shell "test -f $PREFS || printf '<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\" ?>\n<map>\n</map>\n' > $PREFS"
 adb shell "o=\$(stat -c %u:%g /data/data/$PKG); sed -i -e '/name=\"health_connect_enable\"/d' -e 's#</map>#    <boolean name=\"health_connect_enable\" value=\"true\" />\n    <boolean name=\"warning_agreed_to\" value=\"true\" />\n    <boolean name=\"I_understand\" value=\"true\" />\n</map>#' $PREFS; chown \$o $PREFS; chmod 660 $PREFS; restorecon $PREFS"
-adb shell grep -E 'health_connect|agreed' $PREFS | tee -a "$OUT/steps.txt"
+adb shell "grep -E 'health_connect|agreed' $PREFS" | tee -a "$OUT/steps.txt"
 
-adb shell am start -W -n $PKG/.utils.Preferences >/dev/null; sleep 5
+timeout 60 adb shell am start -W -n $PKG/.utils.Preferences >/dev/null; sleep 5
 tap_text "Inter-app settings" 15 &&
     tap_text "Google Health Connect" 10 &&
     adb exec-out screencap -p > "$OUT/1-health-connect-settings.png" &&
@@ -67,7 +69,7 @@ sleep 5
 
 log "resumed activity after tap: $(resumed)"
 adb exec-out screencap -p > "$OUT/2-after-manage-permissions.png"
-adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml > "$OUT/ui-after.xml"
+timeout 60 adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml > "$OUT/ui-after.xml"
 adb logcat -d > "$OUT/logcat-full.txt"
 grep -E 'HealthGamut|SecurityException|GRANT_RUNTIME_PERMISSIONS|ActivityNotFound|ActivityTaskManager: START|AndroidRuntime' "$OUT/logcat-full.txt" > "$OUT/logcat-relevant.txt"
 log "relevant log lines:"
